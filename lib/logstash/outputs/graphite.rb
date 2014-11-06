@@ -33,7 +33,7 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   # The metric(s) to use. This supports dynamic strings like %{host}
   # for metric names and also for values. This is a hash field with key 
   # being the metric name, value being the metric value. Example:
-  #
+  # [source,ruby]
   #     [ "%{host}/uptime", "%{uptime_1m}" ]
   #
   # The value will be coerced to a floating point value. Values which cannot be
@@ -57,7 +57,7 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
 
   # Defines the format of the metric string. The placeholder '*' will be
   # replaced with the name of the actual metric.
-  #
+  # [source,ruby]
   #     metrics_format => "foo.bar.*.sum"
   #
   # NOTE: If no metrics_format is defined, the name of the metric will be used as fallback.
