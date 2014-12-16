@@ -51,6 +51,11 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   # Exclude regex matched metric names, by default exclude unresolved %{field} strings.
   config :exclude_metrics, :validate => :array, :default => [ "%\{[^}]+\}" ]
 
+  # Use this field for the timestamp instead of '@timestamp' which is the
+  # default. Useful when backfilling or just getting more accurate data into
+  # graphite since you probably have a cache layer infront of Logstash.
+  config :timestamp_field, :validate => :string, :default => '@timestamp'
+
   # Enable debug output.
   config :debug, :validate => :boolean, :default => false, :deprecated => "This setting was never used by this plugin. It will be removed soon."
 
@@ -102,7 +107,7 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
     # Graphite message format: metric value timestamp\n
 
     messages = []
-    timestamp = event.sprintf("%{+%s}")
+    timestamp = event[@timestamp_field].to_i
 
     if @fields_are_metrics
       @logger.debug("got metrics event", :metrics => event.to_hash)

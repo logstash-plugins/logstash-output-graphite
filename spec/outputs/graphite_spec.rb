@@ -248,4 +248,40 @@ describe LogStash::Outputs::Graphite do
     end
   end
 
+  context "timestamp_field used is timestamp_new" do
+    timestamp_new = (Time.now + 3).to_i
+    let(:config) do <<-CONFIG
+          input {
+            generator {
+              message => "foo=123"
+              count => 1
+              type => "generator"
+            }
+          }
+
+          filter {
+            ruby {
+              code => "event['timestamp_new'] = Time.at(#{timestamp_new})"
+            }
+          }
+
+          output {
+            graphite {
+                host => "localhost"
+                port => #{port}
+                timestamp_field => "timestamp_new"
+                metrics => ["foo", "1"]
+                debug => true
+            }
+          }
+    CONFIG
+    end
+
+    it "timestamp matches timestamp_new" do
+      lines = server.pop
+      expect(lines).to match(/^foo 1.0 #{timestamp_new}\n$/)
+    end
+
+  end
+
 end
