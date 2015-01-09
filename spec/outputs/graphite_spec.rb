@@ -1,6 +1,5 @@
 require "logstash/devutils/rspec/spec_helper"
 require "logstash/outputs/graphite"
-require "mocha/api"
 
 describe LogStash::Outputs::Graphite, :socket => true do
   
