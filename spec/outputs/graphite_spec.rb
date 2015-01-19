@@ -1,6 +1,6 @@
 require_relative '../spec_helper'
 
-describe LogStash::Outputs::Graphite, :socket => true do
+describe LogStash::Outputs::Graphite do
 
   let(:port) { 4939 }
   let(:config) do <<-CONFIG
