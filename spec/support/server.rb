@@ -12,8 +12,10 @@ module Mocks
       Thread.new do
         client = @server.accept
         while true
-          line = client.readline
-          @queue << line
+          if !client.eof?
+            line = client.readline
+            @queue << line
+          end
         end
       end
       self
