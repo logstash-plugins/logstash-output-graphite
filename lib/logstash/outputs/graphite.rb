@@ -11,7 +11,6 @@ require "socket"
 # capture the metric values from the logs and emit them to Graphite.
 class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   config_name "graphite"
-  milestone 2
 
   EXCLUDE_ALWAYS = [ "@timestamp", "@version" ]
 
