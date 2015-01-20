@@ -169,7 +169,7 @@ describe LogStash::Outputs::Graphite do
         end
 
         it "generate no event" do
-          expect(server.empty?).to be_true
+          expect(server.empty?).to eq(true)
         end
       end
 
