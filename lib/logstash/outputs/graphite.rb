@@ -108,6 +108,7 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
 
     messages = []
     timestamp = event[@timestamp_field].to_i
+    @metrics_format = event.sprintf(@metrics_format)
 
     if @fields_are_metrics
       @logger.debug("got metrics event", :metrics => event.to_hash)
