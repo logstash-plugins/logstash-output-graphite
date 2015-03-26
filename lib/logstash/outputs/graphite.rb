@@ -33,7 +33,7 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   # for metric names and also for values. This is a hash field with key 
   # being the metric name, value being the metric value. Example:
   # [source,ruby]
-  #     [ "%{host}/uptime", "%{uptime_1m}" ]
+  #     metrics => { "%{host}/uptime" => "%{uptime_1m}" }
   #
   # The value will be coerced to a floating point value. Values which cannot be
   # coerced will be set to zero (0). You may use either `metrics` or `fields_are_metrics`,
