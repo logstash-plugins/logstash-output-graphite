@@ -1,24 +1,8 @@
 module Mocks
   class Server
 
-    def initialize(port)
-      @queue = Queue.new
-      @port  = port
-    end
-
-    def start
-      @server = TCPServer.new("127.0.0.1", @port)
-      @queue.clear
-      Thread.new do
-        client = @server.accept
-        while true
-          if !client.eof?
-            line = client.readline
-            @queue << line
-          end
-        end
-      end
-      self
+    def initialize
+      @queue = Array.new
     end
 
     def size
@@ -30,12 +14,16 @@ module Mocks
     end
 
     def stop
-      @server.close
     end
 
     def empty?
       @queue.empty?
     end
 
+    def puts(data)
+      data.split("\n").each do |line|
+        @queue << "#{line}\n"
+      end
+    end
   end
 end
