@@ -105,6 +105,40 @@ describe LogStash::Outputs::Graphite do
         line = server.pop
         expect(line).to match(/^foo 123.0 \d{10,}\n$/)
       end
+
+      context "contains dynamic string parameter" do
+        let(:config) do <<-CONFIG
+          input {
+            generator {
+              message => "foo=123"
+              count => 1
+              type => "generator"
+              add_field => ["app", "baz"]
+            }
+          }
+
+          filter {
+            kv { }
+          }
+
+          output {
+            graphite {
+                host => "localhost"
+                port => #{port}
+                fields_are_metrics => true
+                include_metrics => ["foo"]
+                metrics_format => "foo.%{app}.*"
+                debug => true
+            }
+          }
+        CONFIG
+        end
+
+        it "match with dynamic value" do
+          lines = server.pop
+          expect(lines).to match(/^foo.baz.foo 123.0 \d{10,}\n$/)
+        end
+      end
     end
   end
 
