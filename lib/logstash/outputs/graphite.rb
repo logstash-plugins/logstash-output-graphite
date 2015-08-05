@@ -67,6 +67,18 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   # NOTE: If no metrics_format is defined, the name of the metric will be used as fallback.
   config :metrics_format, :validate => :string, :default => DEFAULT_METRICS_FORMAT
 
+  # When hashes are passed in as values they are broken out into a dotted notation
+  # For instance if you configure this plugin with
+  # # [source,ruby]
+  #     metrics => "mymetrics"
+  #
+  # and "mymetrics" is a nested hash of '{a => 1, b => { c => 2 }}'
+  # this plugin will generate two metrics: a => 1, and b.c => 2 .
+  # If you've specified a 'metrics_format' it will respect that,
+  # but you still may want control over the separator within these nested key names.
+  # This config setting changes the separator from the '.' default.
+  config :nested_object_separator, :validate => :string, :default => "."
+
   def register
     @include_metrics.collect!{|regexp| Regexp.new(regexp)}
     @exclude_metrics.collect!{|regexp| Regexp.new(regexp)}
@@ -180,7 +192,7 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   def dotify(hash,prefix=nil)
     hash.reduce({}) do |acc,kv|
       k,v = kv
-      pk = prefix ? "#{prefix}.#{k}" : k.to_s
+      pk = prefix ? "#{prefix}#{@nested_object_separator}#{k}" : k.to_s
       if v.is_a?(Hash)
         acc.merge!(dotify(v, pk))
       elsif v.is_a?(Array)
