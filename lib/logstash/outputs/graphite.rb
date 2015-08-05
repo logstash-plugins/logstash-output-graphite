@@ -106,26 +106,9 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
 
     # Graphite message format: metric value timestamp\n
 
-    messages = []
-    timestamp = event[@timestamp_field].to_i
-
-    if @fields_are_metrics
-      @logger.debug("got metrics event", :metrics => event.to_hash)
-      event.to_hash.each do |metric,value|
-        next if EXCLUDE_ALWAYS.include?(metric)
-        next unless @include_metrics.empty? || @include_metrics.any? { |regexp| metric.match(regexp) }
-        next if @exclude_metrics.any? {|regexp| metric.match(regexp)}
-        messages << "#{construct_metric_name(metric)} #{event.sprintf(value.to_s).to_f} #{timestamp}"
-      end
-    else
-      @metrics.each do |metric, value|
-        @logger.debug("processing", :metric => metric, :value => value)
-        metric = event.sprintf(metric)
-        next unless @include_metrics.any? {|regexp| metric.match(regexp)}
-        next if @exclude_metrics.any? {|regexp| metric.match(regexp)}
-        messages << "#{construct_metric_name(event.sprintf(metric))} #{event.sprintf(value).to_f} #{timestamp}"
-      end
-    end
+    messages = @fields_are_metrics ?
+      messages_from_event_fields(event, @include_metrics, @exclude_metrics) :
+      messages_from_event_metrics(event, @metrics)
 
     if messages.empty?
       @logger.debug("Message is empty, not sending anything to Graphite", :messages => messages, :host => @host, :port => @port)
@@ -145,6 +128,36 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
         retry if @resend_on_failure
       end
     end
-
   end # def receive
+
+  private
+
+  def messages_from_event_fields(event, include_metrics, exclude_metrics)
+    timestamp = event_timestamp(event)
+    @logger.debug? && @logger.debug("got metrics event", :metrics => event.to_hash)
+    event.to_hash.map do |metric,value|
+      next if EXCLUDE_ALWAYS.include?(metric)
+      next unless include_metrics.empty? || include_metrics.any? { |regexp| metric.match(regexp) }
+      next if exclude_metrics.any? {|regexp| metric.match(regexp)}
+
+      "#{construct_metric_name(metric)} #{event.sprintf(value.to_s).to_f} #{timestamp}"
+    end
+  end
+
+  def messages_from_event_metrics(event, metrics)
+    timestamp = event_timestamp(event)
+    metrics.map do |metric, value|
+      @logger.debug("processing", :metric => metric, :value => value)
+      metric = event.sprintf(metric)
+      next unless @include_metrics.any? {|regexp| metric.match(regexp)}
+      next if @exclude_metrics.any? {|regexp| metric.match(regexp)}
+
+      "#{construct_metric_name(event.sprintf(metric))} #{event.sprintf(value).to_f} #{timestamp}"
+    end
+  end
+
+  def event_timestamp(event)
+    event[@timestamp_field].to_i
+  end
+
 end # class LogStash::Outputs::Graphite
