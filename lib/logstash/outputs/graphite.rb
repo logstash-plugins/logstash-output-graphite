@@ -147,7 +147,7 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   def messages_from_event_fields(event, include_metrics, exclude_metrics)
     timestamp = event_timestamp(event)
     @logger.debug? && @logger.debug("got metrics event", :metrics => event.to_hash)
-    event.to_hash.map do |metric,value|
+    event.to_hash.flat_map do |metric,value|
       next if EXCLUDE_ALWAYS.include?(metric)
       next unless include_metrics.empty? || include_metrics.any? { |regexp| metric.match(regexp) }
       next if exclude_metrics.any? {|regexp| metric.match(regexp)}
