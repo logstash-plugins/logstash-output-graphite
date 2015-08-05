@@ -36,13 +36,23 @@ describe LogStash::Outputs::Graphite do
       let(:event) { LogStash::Event.new("foo" => "123") }
 
       context "match one key" do
-        it "generate one element" do
+        it "should generate one element" do
           expect(server.size).to eq(1)
         end
 
-        it "match the generated key" do
+        it "should match the generated key" do
           line = server.pop
           expect(line).to match(/^foo.bar.sys.data.foo 123.0 \d{10,}\n$/)
+        end
+      end
+
+      context "when matching a nested hash" do
+        let(:event) { LogStash::Event.new("foo" => {"a" => 3, "c" => {"d" => 2}}) }
+
+        it "should create the proper formatted lines" do
+          lines = [server.pop, server.pop].sort # Put key 'a' first
+          expect(lines[0]).to match(/^foo.bar.sys.data.foo.a 3 \d{10,}\n$/)
+          expect(lines[1]).to match(/^foo.bar.sys.data.foo.c.d 2 \d{10,}\n$/)
         end
       end
     end
@@ -143,5 +153,35 @@ describe LogStash::Outputs::Graphite do
       line = server.pop
       expect(line).to match(/^foo 1.0 #{timestamp_new}\n$/)
     end
+  end
+
+  describe "dotifying a hash" do
+    let(:event) { LogStash::Event.new( "metrics" => hash) }
+    let(:dotified) { LogStash::Outputs::Graphite.new().send(:dotify, hash) }
+
+    context "with a complex hash" do
+      let(:hash) { {:a => 2, :b => {:c => 3, :d => 4, :e => {:f => 5}}} }
+
+      it "should dottify correctly" do
+        expect(dotified).to eql({"a" => 2, "b.c" => 3, "b.d" => 4, "b.e.f" => 5})
+      end
+    end
+
+    context "with a simple hash" do
+      let(:hash) { {:a => 2, 5 => 4} }
+
+      it "should do nothing more than stringify the keys" do
+        expect(dotified).to eql("a" => 2, "5" => 4)
+      end
+    end
+
+    context "with an array value" do
+      let(:hash) { {:a => 2, 5 => 4, :c => [1,2,3]} }
+
+      it "should ignore array values" do
+        expect(dotified).to eql("a" => 2, "5" => 4)
+      end
+    end
+
   end
 end

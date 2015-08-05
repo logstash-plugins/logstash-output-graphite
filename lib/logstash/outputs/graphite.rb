@@ -140,24 +140,57 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
       next unless include_metrics.empty? || include_metrics.any? { |regexp| metric.match(regexp) }
       next if exclude_metrics.any? {|regexp| metric.match(regexp)}
 
-      "#{construct_metric_name(metric)} #{event.sprintf(value.to_s).to_f} #{timestamp}"
+      metrics_lines_for_event(event, metric, value, timestamp)
     end
   end
 
   def messages_from_event_metrics(event, metrics)
     timestamp = event_timestamp(event)
-    metrics.map do |metric, value|
+    metrics.flat_map do |metric, value|
       @logger.debug("processing", :metric => metric, :value => value)
       metric = event.sprintf(metric)
       next unless @include_metrics.any? {|regexp| metric.match(regexp)}
       next if @exclude_metrics.any? {|regexp| metric.match(regexp)}
 
-      "#{construct_metric_name(event.sprintf(metric))} #{event.sprintf(value).to_f} #{timestamp}"
+      metrics_lines_for_event(event, metric, value, timestamp)
     end
   end
 
   def event_timestamp(event)
     event[@timestamp_field].to_i
+  end
+
+  def metrics_lines_for_event(event, metric, value, timestamp)
+    if event[metric].is_a?(Hash)
+      dotify(event[metric], metric).map do |k,v|
+        metrics_line(k, v, timestamp)
+      end
+    else
+      metrics_line(event.sprintf(metric), event.sprintf(value).to_f, timestamp)
+    end
+  end
+
+  def metrics_line(name, value, timestamp)
+    "#{construct_metric_name(name)} #{value} #{timestamp}"
+  end
+
+  # Take a nested ruby hash of the form {:a => {:b => 2}, c: => 3} and
+  # turn it into a hash of the form
+  # { "a.b" => 2, "c" => 3}
+  def dotify(hash,prefix=nil)
+    hash.reduce({}) do |acc,kv|
+      k,v = kv
+      pk = prefix ? "#{prefix}.#{k}" : k.to_s
+      if v.is_a?(Hash)
+        acc.merge!(dotify(v, pk))
+      elsif v.is_a?(Array)
+        # There's no right answer here, so we do nothing
+        @logger.warn("Array values not supported for graphite metrics! Ignoring #{hash} @ #{prefix}")
+      else
+        acc[pk] = v
+      end
+      acc
+    end
   end
 
 end # class LogStash::Outputs::Graphite
