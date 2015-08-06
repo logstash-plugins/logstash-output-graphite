@@ -34,7 +34,7 @@ describe LogStash::Outputs::Graphite do
                                                       "metrics_format" => "foo.%{@host}.sys.data.*") }
 
       let(:event) { LogStash::Event.new("foo" => "123", "@host" => "testhost") }
-      let(:expected_metric_prefix) { "foo.#{event['@host']}.sys.data.foo" }
+      let(:expected_metric_prefix) { "foo.#{event['@host']}.sys.data" }
 
       context "match one key" do
         it "should generate one element" do
@@ -43,7 +43,7 @@ describe LogStash::Outputs::Graphite do
 
         it "should match the generated key" do
           line = server.pop
-          expect(line).to match(/^#{expected_metric_name} 123.0 \d{10,}\n$/)
+          expect(line).to match(/^#{expected_metric_prefix}.foo 123.0 \d{10,}\n$/)
         end
       end
 
@@ -52,8 +52,8 @@ describe LogStash::Outputs::Graphite do
 
         it "should create the proper formatted lines" do
           lines = [server.pop, server.pop].sort # Put key 'a' first
-          expect(lines[0]).to match(/^foo.#{event['@host']}.sys.data.foo.a 3 \d{10,}\n$/)
-          expect(lines[1]).to match(/^foo.#{event['@host']}.sys.data.foo.c.d 2 \d{10,}\n$/)
+          expect(lines[0]).to match(/^#{expected_metric_prefix}.foo.a 3 \d{10,}\n$/)
+          expect(lines[1]).to match(/^#{expected_metric_prefix}.foo.c.d 2 \d{10,}\n$/)
         end
       end
     end
