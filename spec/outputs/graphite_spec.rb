@@ -31,9 +31,10 @@ describe LogStash::Outputs::Graphite do
                                                       "port" => port,
                                                       "fields_are_metrics" => true,
                                                       "include_metrics" => ["foo"],
-                                                      "metrics_format" => "foo.bar.sys.data.*") }
+                                                      "metrics_format" => "foo.%{@host}.sys.data.*") }
 
-      let(:event) { LogStash::Event.new("foo" => "123") }
+      let(:event) { LogStash::Event.new("foo" => "123", "@host" => "testhost") }
+      let(:expected_metric_prefix) { "foo.#{event['@host']}.sys.data.foo" }
 
       context "match one key" do
         it "should generate one element" do
@@ -42,17 +43,17 @@ describe LogStash::Outputs::Graphite do
 
         it "should match the generated key" do
           line = server.pop
-          expect(line).to match(/^foo.bar.sys.data.foo 123.0 \d{10,}\n$/)
+          expect(line).to match(/^#{expected_metric_name} 123.0 \d{10,}\n$/)
         end
       end
 
       context "when matching a nested hash" do
-        let(:event) { LogStash::Event.new("foo" => {"a" => 3, "c" => {"d" => 2}}) }
+        let(:event) { LogStash::Event.new("foo" => {"a" => 3, "c" => {"d" => 2}}, "@host" => "myhost") }
 
         it "should create the proper formatted lines" do
           lines = [server.pop, server.pop].sort # Put key 'a' first
-          expect(lines[0]).to match(/^foo.bar.sys.data.foo.a 3 \d{10,}\n$/)
-          expect(lines[1]).to match(/^foo.bar.sys.data.foo.c.d 2 \d{10,}\n$/)
+          expect(lines[0]).to match(/^foo.#{event['@host']}.sys.data.foo.a 3 \d{10,}\n$/)
+          expect(lines[1]).to match(/^foo.#{event['@host']}.sys.data.foo.c.d 2 \d{10,}\n$/)
         end
       end
     end
@@ -192,6 +193,5 @@ describe LogStash::Outputs::Graphite do
         expect(dotified).to eql("a" => 2, "5" => 4)
       end
     end
-
   end
 end

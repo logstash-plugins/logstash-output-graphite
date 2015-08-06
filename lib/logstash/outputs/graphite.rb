@@ -104,9 +104,10 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
     end
   end # def connect
 
-  def construct_metric_name(metric)
+  def construct_metric_name(event, metric)
     if @metrics_format
-      return @metrics_format.gsub(METRIC_PLACEHOLDER, metric)
+      sprinted = event.sprintf(@metrics_format)
+      return sprinted.gsub(METRIC_PLACEHOLDER, metric)
     end
 
     metric
@@ -175,15 +176,15 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   def metrics_lines_for_event(event, metric, value, timestamp)
     if event[metric].is_a?(Hash)
       dotify(event[metric], metric).map do |k,v|
-        metrics_line(k, v, timestamp)
+        metrics_line(event, k, v, timestamp)
       end
     else
-      metrics_line(event.sprintf(metric), event.sprintf(value).to_f, timestamp)
+      metrics_line(event, event.sprintf(metric), event.sprintf(value).to_f, timestamp)
     end
   end
 
-  def metrics_line(name, value, timestamp)
-    "#{construct_metric_name(name)} #{value} #{timestamp}"
+  def metrics_line(event, name, value, timestamp)
+    "#{construct_metric_name(event, name)} #{value} #{timestamp}"
   end
 
   # Take a nested ruby hash of the form {:a => {:b => 2}, c: => 3} and
