@@ -134,6 +134,16 @@ describe LogStash::Outputs::Graphite do
           line = server.pop
           expect(line).to match(/^custom.foo 123.0 \d{10,}\n$/)
         end
+
+        context "when matching a nested hash" do
+          let(:event) { LogStash::Event.new("custom.foo" => {"a" => 3, "c" => {"d" => 2}}) }
+
+          it "should create the proper formatted lines" do
+            lines = [server.pop, server.pop].sort # Put key 'a' first
+            expect(lines[0]).to match(/^custom.foo.a 3 \d{10,}\n$/)
+            expect(lines[1]).to match(/^custom.foo.c.d 2 \d{10,}\n$/)
+          end
+        end
       end
     end
   end
