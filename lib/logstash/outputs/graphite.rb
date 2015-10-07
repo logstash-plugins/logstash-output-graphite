@@ -115,7 +115,7 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
 
   public
   def receive(event)
-    return unless output?(event)
+    
 
     # Graphite message format: metric value timestamp\n
 
