@@ -30,7 +30,7 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   config :resend_on_failure, :validate => :boolean, :default => false
 
   # The metric(s) to use. This supports dynamic strings like %{host}
-  # for metric names and also for values. This is a hash field with key 
+  # for metric names and also for values. This is a hash field with key
   # being the metric name, value being the metric value. Example:
   # [source,ruby]
   #     metrics => { "%{host}/uptime" => "%{uptime_1m}" }
@@ -90,19 +90,18 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
     end
 
     connect
-  end # def register
+  end
 
   def connect
     # TODO(sissel): Test error cases. Catch exceptions. Find fortune and glory. Retire to yak farm.
     begin
       @socket = TCPSocket.new(@host, @port)
     rescue Errno::ECONNREFUSED => e
-      @logger.warn("Connection refused to graphite server, sleeping...",
-                   :host => @host, :port => @port)
+      @logger.warn("Connection refused to graphite server, sleeping...", :host => @host, :port => @port)
       sleep(@reconnect_interval)
       retry
     end
-  end # def connect
+  end
 
   def construct_metric_name(event, metric)
     if @metrics_format
@@ -113,41 +112,41 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
     metric
   end
 
-  public
   def receive(event)
-    
-
     # Graphite message format: metric value timestamp\n
 
-    messages = @fields_are_metrics ?
-      messages_from_event_fields(event, @include_metrics, @exclude_metrics) :
-      messages_from_event_metrics(event, @metrics)
+    # compact to remove nil messages which produces useless \n
+    messages = (
+      @fields_are_metrics \
+        ? messages_from_event_fields(event, @include_metrics, @exclude_metrics)
+        : messages_from_event_metrics(event, @metrics)
+    ).compact
 
     if messages.empty?
-      @logger.debug("Message is empty, not sending anything to Graphite", :messages => messages, :host => @host, :port => @port)
+      @logger.debug? && @logger.debug("Message is empty, not sending anything to Graphite", :messages => messages, :host => @host, :port => @port)
     else
       message = messages.join("\n")
-      @logger.debug("Sending carbon messages", :messages => messages, :host => @host, :port => @port)
+      @logger.debug? && @logger.debug("Sending carbon messages", :messages => messages, :host => @host, :port => @port)
 
       # Catch exceptions like ECONNRESET and friends, reconnect on failure.
       # TODO(sissel): Test error cases. Catch exceptions. Find fortune and glory.
       begin
         @socket.puts(message)
       rescue Errno::EPIPE, Errno::ECONNRESET, IOError => e
-        @logger.warn("Connection to graphite server died",
-                     :exception => e, :host => @host, :port => @port)
+        @logger.warn("Connection to graphite server died", :exception => e, :host => @host, :port => @port)
         sleep(@reconnect_interval)
         connect
         retry if @resend_on_failure
       end
     end
-  end # def receive
+  end
 
   private
 
   def messages_from_event_fields(event, include_metrics, exclude_metrics)
-    timestamp = event_timestamp(event)
     @logger.debug? && @logger.debug("got metrics event", :metrics => event.to_hash)
+
+    timestamp = event_timestamp(event)
     event.to_hash.flat_map do |metric,value|
       next if EXCLUDE_ALWAYS.include?(metric)
       next unless include_metrics.empty? || include_metrics.any? { |regexp| metric.match(regexp) }
@@ -160,7 +159,8 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   def messages_from_event_metrics(event, metrics)
     timestamp = event_timestamp(event)
     metrics.flat_map do |metric, value|
-      @logger.debug("processing", :metric => metric, :value => value)
+      @logger.debug? && @logger.debug("processing", :metric => metric, :value => value)
+
       metric = event.sprintf(metric)
       next unless @include_metrics.any? {|regexp| metric.match(regexp)}
       next if @exclude_metrics.any? {|regexp| metric.match(regexp)}
@@ -175,7 +175,7 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
 
   def metrics_lines_for_event(event, metric, value, timestamp)
     if event[metric].is_a?(Hash)
-      dotify(event[metric], metric).map do |k,v|
+      dotify(event[metric], metric).map do |k, v|
         metrics_line(event, k, v, timestamp)
       end
     else
@@ -190,9 +190,9 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   # Take a nested ruby hash of the form {:a => {:b => 2}, c: => 3} and
   # turn it into a hash of the form
   # { "a.b" => 2, "c" => 3}
-  def dotify(hash,prefix=nil)
-    hash.reduce({}) do |acc,kv|
-      k,v = kv
+  def dotify(hash, prefix = nil)
+    hash.reduce({}) do |acc, kv|
+      k, v = kv
       pk = prefix ? "#{prefix}#{@nested_object_separator}#{k}" : k.to_s
       if v.is_a?(Hash)
         acc.merge!(dotify(v, pk))
@@ -205,5 +205,4 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
       acc
     end
   end
-
-end # class LogStash::Outputs::Graphite
+end
