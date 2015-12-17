@@ -26,6 +26,9 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   # Interval between reconnect attempts to Carbon.
   config :reconnect_interval, :validate => :number, :default => 2
 
+  # Number of attempts to be made resending metrics before abandoning
+  config :resend_attempts, :validate => :number, :default => 3
+
   # Should metrics be resent on failure?
   config :resend_on_failure, :validate => :boolean, :default => false
 
@@ -94,12 +97,14 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
 
   def connect
     # TODO(sissel): Test error cases. Catch exceptions. Find fortune and glory. Retire to yak farm.
+    numattempts = 0
     begin
+      numattempts += 1
       @socket = TCPSocket.new(@host, @port)
     rescue Errno::ECONNREFUSED => e
       @logger.warn("Connection refused to graphite server, sleeping...", :host => @host, :port => @port)
       sleep(@reconnect_interval)
-      retry
+      retry if numattempts < @resend_attempts
     end
   end
 
@@ -130,13 +135,15 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
 
       # Catch exceptions like ECONNRESET and friends, reconnect on failure.
       # TODO(sissel): Test error cases. Catch exceptions. Find fortune and glory.
+      numattempts = 0
       begin
+        numattempts += 1
         @socket.puts(message)
       rescue Errno::EPIPE, Errno::ECONNRESET, IOError => e
         @logger.warn("Connection to graphite server died", :exception => e, :host => @host, :port => @port)
         sleep(@reconnect_interval)
         connect
-        retry if @resend_on_failure
+        retry if @resend_on_failure || numattempts < @resend_attempts
       end
     end
   end
