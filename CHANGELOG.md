@@ -1,3 +1,6 @@
+## 2.1.0
+ - Preventing output blocking when the graphite server is down by introducing a resend_attempts counter.
+
 ## 2.0.3
  - Fixed empty/nil messages handling
 
