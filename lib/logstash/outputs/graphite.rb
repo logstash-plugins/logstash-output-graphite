@@ -79,6 +79,11 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   # This config setting changes the separator from the '.' default.
   config :nested_object_separator, :validate => :string, :default => "."
 
+  # TODO
+  # In the special case of using a hash field as metrics, one could want to skip the "metrics container" name by setting this config to `true`
+  # For example an event containing a field "mymetrics" => {a => 1, b => { c => 2 }} is normally converted into `mymetrics.a` ..., with this config it would simply write `a`...
+  config :skip_prefix_for_metrics_hash, :validate => :boolean, :default => false
+
   def register
     @include_metrics.collect!{|regexp| Regexp.new(regexp)}
     @exclude_metrics.collect!{|regexp| Regexp.new(regexp)}
@@ -175,7 +180,7 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
 
   def metrics_lines_for_event(event, metric, value, timestamp)
     if event[metric].is_a?(Hash)
-      dotify(event[metric], metric).map do |k, v|
+      dotify(event[metric], @skip_prefix_for_metrics_hash ? nil: metric).map do |k, v|
         metrics_line(event, k, v, timestamp)
       end
     else

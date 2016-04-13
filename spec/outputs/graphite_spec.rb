@@ -12,6 +12,32 @@ describe LogStash::Outputs::Graphite do
     subject.receive(event)
   end
 
+  context "with a field hash" do
+
+    subject { LogStash::Outputs::Graphite.new("host" => "localhost", "port" => port, "metrics" => {"metrics" => "whatever"}) }
+    let(:event) { LogStash::Event.new("@meta" => {"metrics_field" => "metrics"}, "foo" => "fancy", "metrics" => { 'foo.bar' => 1.0,
+    'bar.foo'=> 2.0}, "bar" => 42) }
+
+    it "include all metrics" do
+      expect(server.size).to eq(2)
+      expect(server.pop).to match(/^metrics.bar.foo 2.0 \d{10,}\n$/)
+      expect(server.pop).to match(/^metrics.foo.bar 1.0 \d{10,}\n$/)
+    end
+  end
+
+  context "with a field hash" do
+
+    subject { LogStash::Outputs::Graphite.new("host" => "localhost", "port" => port, "metrics" => {"metrics" => "whatever"}, "skip_prefix_for_metrics_hash" => true) }
+    let(:event) { LogStash::Event.new("@meta" => {"metrics_field" => "metrics"}, "foo" => "fancy", "metrics" => { 'foo.bar' => 1.0,
+    'bar.foo'=> 2.0}, "bar" => 42) }
+
+    it "include all metrics" do
+      expect(server.size).to eq(2)
+      expect(server.pop).to match(/^bar.foo 2.0 \d{10,}\n$/)
+      expect(server.pop).to match(/^foo.bar 1.0 \d{10,}\n$/)
+    end
+  end
+
   context "with a default run" do
 
     subject { LogStash::Outputs::Graphite.new("host" => "localhost", "port" => port, "metrics" => [ "hurray.%{foo}", "%{bar}" ]) }
