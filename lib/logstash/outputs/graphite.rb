@@ -170,12 +170,12 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   end
 
   def event_timestamp(event)
-    event[@timestamp_field].to_i
+    event.get(@timestamp_field).to_i
   end
 
   def metrics_lines_for_event(event, metric, value, timestamp)
-    if event[metric].is_a?(Hash)
-      dotify(event[metric], metric).map do |k, v|
+    if event.get(metric).is_a?(Hash)
+      dotify(event.get(metric), metric).map do |k, v|
         metrics_line(event, k, v, timestamp)
       end
     else

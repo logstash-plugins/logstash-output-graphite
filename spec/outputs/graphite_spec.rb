@@ -36,7 +36,7 @@ describe LogStash::Outputs::Graphite do
                                                       "metrics_format" => "foo.%{@host}.sys.data.*") }
 
       let(:event) { LogStash::Event.new("foo" => "123", "@host" => "testhost") }
-      let(:expected_metric_prefix) { "foo.#{event['@host']}.sys.data" }
+      let(:expected_metric_prefix) { "foo.#{event.get('@host')}.sys.data" }
 
       context "match one key" do
         it "should generate one element" do
