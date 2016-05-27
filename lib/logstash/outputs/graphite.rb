@@ -56,9 +56,6 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   # graphite since you probably have a cache layer infront of Logstash.
   config :timestamp_field, :validate => :string, :default => '@timestamp'
 
-  # Enable debug output.
-  config :debug, :validate => :boolean, :default => false, :deprecated => "This setting was never used by this plugin. It will be removed soon."
-
   # Defines the format of the metric string. The placeholder '*' will be
   # replaced with the name of the actual metric.
   # [source,ruby]
