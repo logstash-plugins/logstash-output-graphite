@@ -128,7 +128,16 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
       # Catch exceptions like ECONNRESET and friends, reconnect on failure.
       # TODO(sissel): Test error cases. Catch exceptions. Find fortune and glory.
       begin
-        @socket.puts(message)
+        begin
+          @socket.puts(message)
+          @socket.read_nonblock(1)
+        rescue Errno::EAGAIN
+          @logger.debug("No data, connection to graphite is till alive", :host => @host, :port => @port)
+        rescue EOFError
+          @logger.warn("Graphite closed the connection, closing local socket", :host => @host, :port => @port)
+          @socket.close
+          raise
+        end
       rescue Errno::EPIPE, Errno::ECONNRESET, IOError => e
         @logger.warn("Connection to graphite server died", :exception => e, :host => @host, :port => @port)
         sleep(@reconnect_interval)
