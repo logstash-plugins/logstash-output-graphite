@@ -17,13 +17,21 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
   DEFAULT_METRICS_FORMAT = "*"
   METRIC_PLACEHOLDER = "*"
 
+  DEFAULT_HOST = "localhost"
+  DEFAULT_PORT = 2003
+  DEFAULT_HOST_PORT = "%s:%s" % [DEFAULT_HOST, DEFAULT_PORT]
+
   # The hostname or IP address of the Graphite server.
-  config :host, :validate => :string, :default => "localhost"
+  config :host, :validate => :string, :default => DEFAULT_HOST, :deprecated => "This setting is being deprecated, use :hosts instead."
 
-  # The port to connect to on the Graphite server.
-  config :port, :validate => :number, :default => 2003
+  # The port to connect to the Graphite server.
+  config :port, :validate => :number, :default => DEFAULT_PORT, :deprecated => "This setting is being deprecated, use :hosts instead."
 
-  # Interval between reconnect attempts to Carbon.
+  # The list of known Graphite servers to connect to. One host is selected randomly (there is no precedence). If one host becomes unreachable, another one is selected randomly.
+  # All entries in this list can contain a port number. If no port number is given, the default value of 2003 is used.
+  config :hosts, :validate => :string, :list => true, :default => [DEFAULT_HOST_PORT]
+
+  # Interval between reconnect attempts to Graphite server, seconds.
   config :reconnect_interval, :validate => :number, :default => 2
 
   # Should metrics be resent on failure?
@@ -86,17 +94,54 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
       @metrics_format = DEFAULT_METRICS_FORMAT
     end
 
+    setup_hosts
     connect
   end
 
+  def setup_hosts
+
+    # backward compatibility
+    # assuming user filled @host and @port instead of @hosts
+    if @hosts && @hosts.size == 1 && @hosts[0] == DEFAULT_HOST_PORT
+      @hosts.replace(["%s:%s" % [@host, @port]])
+    end
+
+    # dealing with ipv6
+    @hosts.each do |host|
+      if host.count(":") > 1 and not host.count("[]") == 2
+          @logger.warn("ipv6 adressess must use square brackets, skipping", :host => host)
+          @hosts.delete(host)
+      end
+    end
+
+    # dealing with default port
+    @hosts.each do |host|
+      _, _, port = host.rpartition(":")
+      unless port.to_i.to_s == port
+        @hosts.delete(host)
+        @hosts.push("%s:%s" % [host, DEFAULT_PORT])
+      end
+    end
+
+  end
+
   def connect
-    # TODO(sissel): Test error cases. Catch exceptions. Find fortune and glory. Retire to yak farm.
+    hosts_to_try = @hosts.clone
     begin
-      @socket = TCPSocket.new(@host, @port)
-    rescue Errno::ECONNREFUSED => e
-      @logger.warn("Connection refused to graphite server, sleeping...", :host => @host, :port => @port)
-      sleep(@reconnect_interval)
-      retry
+      host = hosts_to_try.delete hosts_to_try.sample
+      address, _, port = host.rpartition(":")
+      @socket = TCPSocket.new(address, port)
+    rescue StandardError => e
+      @logger.warn("Cannot connect to graphite server", :address => address, :port => port, :e => e.message)
+      if hosts_to_try.size > 0
+        @logger.debug? && @logger.debug("Trying another server")
+        retry
+      else
+        @logger.debug? && @logger.debug("No more hosts to try, sleeping and starting over...")
+        sleep(@reconnect_interval)
+        hosts_to_try = @hosts.clone
+        retry
+      end
     end
   end
 
@@ -120,18 +165,17 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
     ).compact
 
     if messages.empty?
-      @logger.debug? && @logger.debug("Message is empty, not sending anything to Graphite", :messages => messages, :host => @host, :port => @port)
+      @logger.debug? && @logger.debug("Message is empty, not sending anything to Graphite", :messages => messages)
     else
       message = messages.join("\n")
-      @logger.debug? && @logger.debug("Sending carbon messages", :messages => messages, :host => @host, :port => @port)
+      @logger.debug? && @logger.debug("Sending carbon messages", :messages => messages)
 
       # Catch exceptions like ECONNRESET and friends, reconnect on failure.
       # TODO(sissel): Test error cases. Catch exceptions. Find fortune and glory.
       begin
         @socket.puts(message)
-      rescue Errno::EPIPE, Errno::ECONNRESET, IOError => e
-        @logger.warn("Connection to graphite server died", :exception => e, :host => @host, :port => @port)
-        sleep(@reconnect_interval)
+      rescue StandardError => e
+        @logger.warn("Connection to graphite server died", :exception => e)
         connect
         retry if @resend_on_failure
       end

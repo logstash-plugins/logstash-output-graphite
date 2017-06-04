@@ -1,4 +1,9 @@
+# ruby
+
 *.gem
 Gemfile.lock
 .bundle
 vendor
+
+# ide
+.idea

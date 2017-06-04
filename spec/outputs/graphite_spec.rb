@@ -12,9 +12,20 @@ describe LogStash::Outputs::Graphite do
     subject.receive(event)
   end
 
+  context "multiple hosts" do
+
+    let(:subject) { LogStash::Outputs::Graphite.new("hosts" => ["::1", "[::0]", "[cafe:babe:dead:beaf]:8080", "localhost", "0.0.0.0:8080"]) }
+    let(:event) { LogStash::Event.new("foo" => "fancy", "bar" => 42) }
+    let(:hosts) { subject.hosts }
+
+    it "ignore invalid hosts" do
+      expect(hosts).to contain_exactly("[::0]:2003", "[cafe:babe:dead:beaf]:8080", "localhost:2003", "0.0.0.0:8080")
+    end
+  end
+
   context "with a default run" do
 
-    subject { LogStash::Outputs::Graphite.new("host" => "localhost", "port" => port, "metrics" => [ "hurray.%{foo}", "%{bar}" ]) }
+    subject { LogStash::Outputs::Graphite.new("hosts" => ["localhost:%s" % port], "metrics" => [ "hurray.%{foo}", "%{bar}" ]) }
     let(:event) { LogStash::Event.new("foo" => "fancy", "bar" => 42) }
 
     it "generate one element" do
@@ -29,11 +40,10 @@ describe LogStash::Outputs::Graphite do
 
   context "if fields_are_metrics => true" do
     context "when metrics_format => ..." do
-      subject { LogStash::Outputs::Graphite.new("host" => "localhost",
-                                                      "port" => port,
-                                                      "fields_are_metrics" => true,
-                                                      "include_metrics" => ["foo"],
-                                                      "metrics_format" => "foo.%{@host}.sys.data.*") }
+      subject { LogStash::Outputs::Graphite.new("hosts" => ["localhost:%s" % port],
+                                                "fields_are_metrics" => true,
+                                                "include_metrics" => ["foo"],
+                                                "metrics_format" => "foo.%{@host}.sys.data.*") }
 
       let(:event) { LogStash::Event.new("foo" => "123", "@host" => "testhost") }
       let(:expected_metric_prefix) { "foo.#{event.get('@host')}.sys.data" }
@@ -62,11 +72,10 @@ describe LogStash::Outputs::Graphite do
 
     context "match all keys" do
 
-      subject { LogStash::Outputs::Graphite.new("host" => "localhost",
-                                                      "port" => port,
-                                                      "fields_are_metrics" => true,
-                                                      "include_metrics" => [".*"],
-                                                      "metrics_format" => "foo.bar.sys.data.*") }
+      subject { LogStash::Outputs::Graphite.new("hosts" => ["localhost:%s" % port],
+                                                "fields_are_metrics" => true,
+                                                "include_metrics" => [".*"],
+                                                "metrics_format" => "foo.bar.sys.data.*") }
 
       let(:event) { LogStash::Event.new("foo" => "123", "bar" => "42") }
 
@@ -91,11 +100,10 @@ describe LogStash::Outputs::Graphite do
 
     context "no match" do
 
-      subject { LogStash::Outputs::Graphite.new("host" => "localhost",
-                                                      "port" => port,
-                                                      "fields_are_metrics" => true,
-                                                      "include_metrics" => ["notmatchinganything"],
-                                                      "metrics_format" => "foo.bar.sys.data.*") }
+      subject { LogStash::Outputs::Graphite.new("hosts" => ["localhost:%s" % port],
+                                                "fields_are_metrics" => true,
+                                                "include_metrics" => ["notmatchinganything"],
+                                                "metrics_format" => "foo.bar.sys.data.*") }
 
       let(:event) { LogStash::Event.new("foo" => "123", "bar" => "42") }
 
@@ -106,11 +114,10 @@ describe LogStash::Outputs::Graphite do
 
     context "match a key with invalid metric_format" do
 
-      subject { LogStash::Outputs::Graphite.new("host" => "localhost",
-                                                      "port" => port,
-                                                      "fields_are_metrics" => true,
-                                                      "include_metrics" => ["foo"],
-                                                      "metrics_format" => "invalidformat") }
+      subject { LogStash::Outputs::Graphite.new("hosts" => ["localhost:%s" % port],
+                                                "fields_are_metrics" => true,
+                                                "include_metrics" => ["foo"],
+                                                "metrics_format" => "invalidformat") }
 
       let(:event) { LogStash::Event.new("foo" => "123") }
 
@@ -125,11 +132,10 @@ describe LogStash::Outputs::Graphite do
     context "metrics_format not set" do
       context "match one key with metrics list" do
 
-        subject { LogStash::Outputs::Graphite.new("host" => "localhost",
-                                                        "port" => port,
-                                                        "fields_are_metrics" => false,
-                                                        "include_metrics" => ["foo"],
-                                                        "metrics" => [ "custom.foo", "%{foo}" ]) }
+        subject { LogStash::Outputs::Graphite.new("hosts" => ["localhost:%s" % port],
+                                                  "fields_are_metrics" => false,
+                                                  "include_metrics" => ["foo"],
+                                                  "metrics" => [ "custom.foo", "%{foo}" ]) }
 
         let(:event) { LogStash::Event.new("foo" => "123") }
 
@@ -155,10 +161,9 @@ describe LogStash::Outputs::Graphite do
 
     let(:timestamp_new) { (Time.now + 3).to_i }
 
-    subject { LogStash::Outputs::Graphite.new("host" => "localhost",
-                                                    "port" => port,
-                                                    "timestamp_field" => "timestamp_new",
-                                                    "metrics" => ["foo", "1"]) }
+    subject { LogStash::Outputs::Graphite.new("hosts" => ["localhost:%s" % port],
+                                              "timestamp_field" => "timestamp_new",
+                                              "metrics" => ["foo", "1"]) }
 
     let(:event) { LogStash::Event.new("foo" => "123", "timestamp_new" => timestamp_new) }
 
