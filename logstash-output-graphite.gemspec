@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
 
   s.name            = 'logstash-output-graphite'
-  s.version         = '3.1.1'
+  s.version         = '3.2.0'
   s.licenses        = ['Apache License (2.0)']
   s.summary         = "This output allows you to pull metrics from your logs and ship them to Graphite"
   s.description     = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
@@ -27,4 +27,3 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'logstash-filter-kv'
   s.add_development_dependency 'logstash-filter-ruby'
 end
-
