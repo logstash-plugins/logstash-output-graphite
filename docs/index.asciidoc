@@ -1,5 +1,6 @@
 :plugin: graphite
 :type: output
+:default_codec: plain
 
 ///////////////////////////////////////////
 START - GENERATED VARIABLES, DO NOT EDIT!
@@ -171,3 +172,5 @@ graphite since you probably have a cache layer infront of Logstash.
 
 [id="plugins-{type}s-{plugin}-common-options"]
 include::{include_path}/{type}.asciidoc[]
+
+:default_codec!:
