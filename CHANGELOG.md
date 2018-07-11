@@ -1,3 +1,6 @@
+## 3.1.6
+  - Fixed exception handling during socket writing to prevent logstash termination [#33](https://github.com/logstash-plugins/logstash-output-graphite/pull/33)
+
 ## 3.1.5
   - Docs: Set the default_codec doc attribute.
 
