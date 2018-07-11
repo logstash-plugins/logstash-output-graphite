@@ -130,7 +130,12 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
       begin
         @socket.puts(message)
       rescue Errno::EPIPE, Errno::ECONNRESET, IOError => e
-        @logger.warn("Connection to graphite server died", :exception => e, :host => @host, :port => @port)
+        @logger.warn("Connection to graphite server died", :exception => e.class, :message => e.message, :host => @host, :port => @port)
+        sleep(@reconnect_interval)
+        connect
+        retry if @resend_on_failure
+      rescue => e
+        @logger.warn("Failed to send data", :exception => e.class, :message => e.message, :host => @host, :port => @port)
         sleep(@reconnect_interval)
         connect
         retry if @resend_on_failure
