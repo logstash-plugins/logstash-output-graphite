@@ -93,7 +93,7 @@ class LogStash::Outputs::Graphite < LogStash::Outputs::Base
     # TODO(sissel): Test error cases. Catch exceptions. Find fortune and glory. Retire to yak farm.
     begin
       @socket = TCPSocket.new(@host, @port)
-    rescue Errno::ECONNREFUSED => e
+    rescue Errno::ECONNREFUSED, SocketError => e
       @logger.warn("Connection refused to graphite server, sleeping...", :host => @host, :port => @port)
       sleep(@reconnect_interval)
       retry
