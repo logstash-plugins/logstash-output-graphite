@@ -1,6 +1,6 @@
 # Logstash Plugin
 
-[![Travis Build Status](https://travis-ci.org/logstash-plugins/logstash-output-graphite.svg)](https://travis-ci.org/logstash-plugins/logstash-output-graphite)
+[![Travis Build Status](https://travis-ci.com/logstash-plugins/logstash-output-graphite.svg)](https://travis-ci.com/logstash-plugins/logstash-output-graphite)
 
 This is a plugin for [Logstash](https://github.com/elastic/logstash).
 
